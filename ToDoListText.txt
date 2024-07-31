@@ -1,0 +1,28 @@
+To Do List API
+
+Endpoint 
+- Register User
+- Login User
+- Create Task
+- Update Task
+- Delete Task
+- Get All Task
+- Get Single Task
+
+Database :
+	Table User:- Id uuid Primary key
+		   - Username String Unique
+		   - Email String Email Unique
+		   - Password String Hashed
+		   - CreatedAt Time
+		   - UpdatedAt Time
+	
+	Table Task:- Id uuid
+		   - UserId uuid Foreign key Id table user
+		   - Title String
+		   - Description String
+		   - Completed bool
+		   - DueDate time
+		   - Notified bool
+		   - CreatedAt time
+		   - UpdtedAt
