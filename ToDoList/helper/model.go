@@ -21,3 +21,12 @@ func ToAuthResponses(users [] domain.Users)[]web.AuthResponse{
 	}
 	return authResponses
 }
+
+func ToLoginResponse(user domain.Users)web.AuthResponse{
+	return web.AuthResponse{
+		Id: user.Id,
+		Username: user.Username,
+	}
+
+}
+

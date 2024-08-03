@@ -10,5 +10,5 @@ import (
 type AuthService interface {
 	Registration(ctx context.Context, request web.RegistrationRequest) web.AuthResponse
 	Login(ctx context.Context, request web.LoginRequest) (web.AuthResponse,*jwt.Token)
-	Logout(ctx context.Context)
+	
 }

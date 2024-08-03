@@ -1,22 +1,44 @@
 package main
 
 import (
-	"fmt"
-	"strings"
+	"net/http"
 
-	"github.com/google/uuid"
+	"github.com/go-playground/validator/v10"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/julienschmidt/httprouter"
+	"github.com/ryhnfhrza/Golang-To-Do-List-API/app"
+	controller "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/AuthController"
+	"github.com/ryhnfhrza/Golang-To-Do-List-API/exception"
+	"github.com/ryhnfhrza/Golang-To-Do-List-API/helper"
+	repository "github.com/ryhnfhrza/Golang-To-Do-List-API/repository/AuthRepository"
+	service "github.com/ryhnfhrza/Golang-To-Do-List-API/service/AuthService"
 )
 
 func main() {
-  // Buat UUID baru
-	id := uuid.New()
+	validate := validator.New()
+	db := app.NewDb()
 
-	// Ubah UUID menjadi string
-	idStr := id.String()
-
-	// Hapus tanda hubung dari UUID
-	idStrNoHyphens := strings.ReplaceAll(idStr, "-", "")
+	//Auth
+	authRepository := repository.NewAuthRepository()
+	authService := service.NewAuthService(authRepository , db ,validate )
+	authController := controller.NewAuthController(authService)
 
 	
-	fmt.Println("UUID tanpa tanda hubung:", idStrNoHyphens)
+	
+	router := httprouter.New()
+
+	//loginForm
+	router.POST("/todolist/registration",authController.Registration)
+	router.POST("/todolist/login",authController.Login)
+	router.GET("/todolist/logout", authController.Logout)
+
+	router.PanicHandler = exception.ErrorHandler
+
+	server := http.Server{
+		Addr: "localhost:3000",
+		Handler: router,
+	}
+
+	err := server.ListenAndServe()
+	helper.PanicIfError(err)
 }

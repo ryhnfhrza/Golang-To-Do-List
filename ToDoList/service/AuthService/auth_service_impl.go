@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/ryhnfhrza/Golang-To-Do-List-API/exception"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/helper"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/model/domain"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/model/web"
@@ -45,9 +47,16 @@ func(service *AuthServiceImpl)Registration(ctx context.Context, request web.Regi
 	idStr := id.String()
 	idStrNoHyphens := strings.ReplaceAll(idStr, "-", "")
 	
-
-	email,err := service.AuthRepository.CheckEmail(ctx,tx,request.Email)
-	helper.PanicIfError(err)
+	// bug need to fix
+	fmt.Println("before 1")
+	email,errEmail := service.AuthRepository.CheckEmail(ctx,tx,request.Email)
+	if email == ""{
+		fmt.Println("before 2")
+		helper.PanicIfError(errEmail)
+	}
+	fmt.Println("after 1")
+	
+	
 
 	//hashing password handle
 	hashPassword,err := util.HashPassword(request.Password)
@@ -61,7 +70,6 @@ func(service *AuthServiceImpl)Registration(ctx context.Context, request web.Regi
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-
 	user = service.AuthRepository.Registration(ctx,tx,user)
 
 	return helper.ToAuthResponse(user)
@@ -77,7 +85,7 @@ func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginReques
 
 	
 	
-	login,err := service.LoginFormRepository.Login(ctx,tx,request.Username)
+	login,err := service.AuthRepository.Login(ctx,tx,request.Username,request.Password)
 	if err != nil{
 		panic(exception.NewNotFoundError(err.Error()))
 	}
@@ -91,6 +99,7 @@ func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginReques
 	expTime := time.Now().Add(time.Hour * 1)
 	claims := &util.JWTClaim{
 		Username: request.Username,
+		ID: login.Id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: "github.com/ryhnfhrza",
 			ExpiresAt: jwt.NewNumericDate(expTime),
@@ -101,9 +110,7 @@ func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginReques
 
 	
 	
-	return helper.ToLoginFormResponse(login),tokenAlgo
+	return helper.ToLoginResponse(login),tokenAlgo
 }
 
-func(service *AuthServiceImpl)Logout(ctx context.Context){
 
-}
