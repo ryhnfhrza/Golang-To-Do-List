@@ -8,7 +8,18 @@ import (
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/model/web"
 )
 
-func ErrorHandler(writer http.ResponseWriter , request *http.Request, err interface{}){
+func ErrorHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				handleError(writer, request, err)
+			}
+		}()
+		next.ServeHTTP(writer, request)
+	})
+}
+
+func handleError(writer http.ResponseWriter , request *http.Request, err interface{}){
 
 	if notFoundError(writer,request,err){
 		return
@@ -18,7 +29,10 @@ func ErrorHandler(writer http.ResponseWriter , request *http.Request, err interf
 	}
 	if unauthorizedError(writer, request, err) {
 		return
-}
+	}
+	if conflictError(writer,request,err){
+		return
+	}
 
 
 	internalServerError(writer,request,err)
@@ -31,10 +45,30 @@ func validationErrors(writer http.ResponseWriter , request *http.Request, err in
 		writer.Header().Set("Content-Type","application/json")
 		writer.WriteHeader(http.StatusBadRequest)
 
+		validationErrors := make(map[string]string)
+		for _, err := range exception {
+			var message string
+			switch err.Tag() {
+			case "required":
+				message = "This field is required"
+			case "min":
+				message = "This field must be at least " + err.Param() + " characters long"
+			case "max":
+				message = "This field must be at most " + err.Param() + " characters long"
+			case "email":
+				message = "Invalid email address"
+			case "eqfield":
+				message = "This field must be equal to " + err.Param()
+			default:
+				message = "Invalid value"
+			}
+			validationErrors[err.Field()] = message
+		}
+
 		webResponse := web.WebResponse{
 			Code: http.StatusBadRequest,
 			Status: "BAD REQUEST",
-			Data: exception.Error(),
+			Data: validationErrors,
 		}
 		
 		helper.WriteToResponseBody(writer,webResponse)
@@ -91,6 +125,24 @@ func unauthorizedError(writer http.ResponseWriter, request *http.Request, err in
 	}
 	return false
 
+}
+
+func conflictError(writer http.ResponseWriter , request *http.Request, err interface{}) bool {
+	exception,ok := err.(ConflictError)
+	if ok{
+		writer.Header().Set("Content-Type","application/json")
+		writer.WriteHeader(http.StatusConflict)
+
+		webResponse := web.WebResponse{
+			Code: http.StatusConflict,
+			Status: "CONFLICT",
+			Data: exception.Error,
+		}
+		helper.WriteToResponseBody(writer,webResponse)
+		return true
+	}else{
+		return false
+	}
 }
 
 func WriteUnauthorizedError(writer http.ResponseWriter, errorMessage string) {

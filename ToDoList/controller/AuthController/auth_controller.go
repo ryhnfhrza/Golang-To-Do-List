@@ -2,12 +2,10 @@ package controller
 
 import (
 	"net/http"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 type AuthController interface {
-	Registration(writer http.ResponseWriter, request *http.Request,params httprouter.Params)
-	Login(writer http.ResponseWriter, request *http.Request,params httprouter.Params)
-	Logout(writer http.ResponseWriter, request *http.Request,params httprouter.Params)
+	Registration(writer http.ResponseWriter, request *http.Request)
+	Login(writer http.ResponseWriter, request *http.Request)
+	Logout(writer http.ResponseWriter, request *http.Request)
 }

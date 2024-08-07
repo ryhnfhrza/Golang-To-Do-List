@@ -25,35 +25,49 @@ func(Repository *AuthRepositoryImpl)Registration(ctx context.Context, tx *sql.Tx
 	return users
 }
 
-func(Repository *AuthRepositoryImpl)Login(ctx context.Context, tx *sql.Tx, username, password string) (domain.Users,error){
-	SQL := "select username,email,id from users where username = ? and password = ?"
-	rows , err := tx.QueryContext(ctx, SQL, username,password)
+func(Repository *AuthRepositoryImpl)Login(ctx context.Context, tx *sql.Tx, username string) (domain.Users,error){
+	SQL := "select username,email,id,password from users where username = ? "
+	rows , err := tx.QueryContext(ctx, SQL, username)
 	helper.PanicIfError(err)
 	defer rows.Close()
 
 	user := domain.Users{}
 	if rows.Next(){
-		err := rows.Scan(&user.Username,&user.Email,&user.Id)
+		err := rows.Scan(&user.Username,&user.Email,&user.Id,&user.Password)
 		helper.PanicIfError(err)
 		return user,nil
 	}else{
-		return user,errors.New("invalid password")
+		return user,errors.New("invalid username or password ")
 	}
 }
 
-func(Repository *AuthRepositoryImpl)CheckEmail(ctx context.Context, tx *sql.Tx, email string) (string,error){
-	SQL := "select email from users where email = ?"
-	rows , err := tx.QueryContext(ctx, SQL, email)
-	helper.PanicIfError(err)
-	defer rows.Close()
+func(Repository *AuthRepositoryImpl)CheckEmail(ctx context.Context, tx *sql.Tx, email string) (bool,error){
+	SQL := "SELECT COUNT(email) FROM users WHERE email = ?"
+    var emailCount int
+    err := tx.QueryRowContext(ctx, SQL, email).Scan(&emailCount)
+    if err != nil {
+        return false, err 
+    }
 
-	if rows.Next(){
-		return "",errors.New("Can't use email " + email +" , because email is already registered")
-	}else{
-		return email,nil
-	}
+    if emailCount > 0 {
+        return true, nil 
+    }
+    return false, nil 
 }
 
+func(Repository *AuthRepositoryImpl)CheckUsername(ctx context.Context, tx *sql.Tx, username string) (bool,error){
+	SQL := "SELECT COUNT(username) FROM users WHERE username = ?"
+	var usernameCount int
+	err := tx.QueryRowContext(ctx, SQL, username).Scan(&usernameCount)
+	if err != nil {
+			return false, err 
+	}
+
+	if usernameCount > 0 {
+			return true, nil 
+	}
+	return false, nil 
+}
 
 
 

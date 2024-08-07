@@ -7,9 +7,7 @@ import (
 
 func ToAuthResponse(user domain.Users)web.AuthResponse{
 	return web.AuthResponse{
-		Id: user.Id,
 		Username: user.Username,
-		Email: user.Email,
 	}
 
 }
@@ -24,8 +22,7 @@ func ToAuthResponses(users [] domain.Users)[]web.AuthResponse{
 
 func ToLoginResponse(user domain.Users)web.AuthResponse{
 	return web.AuthResponse{
-		Id: user.Id,
-		Username: user.Username,
+		Username: user.Username,	
 	}
 
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -41,22 +40,27 @@ func(service *AuthServiceImpl)Registration(ctx context.Context, request web.Regi
 	tx,err := service.Db.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
+	
+	//check email
+	emailExists, err := service.AuthRepository.CheckEmail(ctx, tx, request.Email)
+			helper.PanicIfError(err)
+
+	if emailExists {
+			panic(exception.NewConflictError("Email " + request.Email + " is already used on another account"))
+	}
+
+	//check username
+	usernameExists, err := service.AuthRepository.CheckUsername(ctx, tx, request.Username)
+    helper.PanicIfError(err)
+
+    if usernameExists {
+        panic(exception.NewConflictError("Username " + request.Username + " is already taken"))
+    }
 
 	//id maker 
 	id := uuid.New()
 	idStr := id.String()
 	idStrNoHyphens := strings.ReplaceAll(idStr, "-", "")
-	
-	// bug need to fix
-	fmt.Println("before 1")
-	email,errEmail := service.AuthRepository.CheckEmail(ctx,tx,request.Email)
-	if email == ""{
-		fmt.Println("before 2")
-		helper.PanicIfError(errEmail)
-	}
-	fmt.Println("after 1")
-	
-	
 
 	//hashing password handle
 	hashPassword,err := util.HashPassword(request.Password)
@@ -65,7 +69,7 @@ func(service *AuthServiceImpl)Registration(ctx context.Context, request web.Regi
 	user := domain.Users{
 		Id: idStrNoHyphens,
 		Username: request.Username,
-		Email: email,
+		Email: request.Email,
 		Password: hashPassword,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -75,28 +79,27 @@ func(service *AuthServiceImpl)Registration(ctx context.Context, request web.Regi
 	return helper.ToAuthResponse(user)
 }
 
-func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginRequest) (web.AuthResponse,*jwt.Token){
+func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginRequest) (web.AuthResponse,*jwt.Token,error){
 	err := service.validate.Struct(request)
 	helper.PanicIfError(err)
 
 	tx,err := service.Db.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
-
 	
 	
-	login,err := service.AuthRepository.Login(ctx,tx,request.Username,request.Password)
+	login,err := service.AuthRepository.Login(ctx,tx,request.Username)
 	if err != nil{
-		panic(exception.NewNotFoundError(err.Error()))
+		return web.AuthResponse{},nil,exception.NewUnauthorizedError("invalid username or password")
 	}
 	
 	
 	err = bcrypt.CompareHashAndPassword([]byte(login.Password),[]byte(request.Password))
 	if err != nil{
-		panic(exception.NewUnauthorizedError("Password is incorrect"))
+		return web.AuthResponse{},nil,exception.NewUnauthorizedError("invalid username or password")
 	}
 	
-	expTime := time.Now().Add(time.Hour * 1)
+	expTime := time.Now().Add(time.Hour * 24 * 7)
 	claims := &util.JWTClaim{
 		Username: request.Username,
 		ID: login.Id,
@@ -105,12 +108,13 @@ func(service *AuthServiceImpl)Login(ctx context.Context, request web.LoginReques
 			ExpiresAt: jwt.NewNumericDate(expTime),
 		},
 	}
-
+	
+	
 	tokenAlgo := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
 
 	
 	
-	return helper.ToLoginResponse(login),tokenAlgo
+	return helper.ToLoginResponse(login),tokenAlgo,nil
 }
 
 
