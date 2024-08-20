@@ -7,11 +7,15 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/app"
-	controller "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/AuthController"
+	controllerAuth "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/AuthController"
+	controllerTasks "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/TasksController"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/exception"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/helper"
-	repository "github.com/ryhnfhrza/Golang-To-Do-List-API/repository/AuthRepository"
-	service "github.com/ryhnfhrza/Golang-To-Do-List-API/service/AuthService"
+	"github.com/ryhnfhrza/Golang-To-Do-List-API/middlewares"
+	repositoryAuth "github.com/ryhnfhrza/Golang-To-Do-List-API/repository/AuthRepository"
+	repositoryTasks "github.com/ryhnfhrza/Golang-To-Do-List-API/repository/TasksRepository"
+	serviceAuth "github.com/ryhnfhrza/Golang-To-Do-List-API/service/AuthService"
+	serviceTasks "github.com/ryhnfhrza/Golang-To-Do-List-API/service/TasksService"
 )
 
 func main() {
@@ -19,10 +23,14 @@ func main() {
 	db := app.NewDb()
 
 	//Auth
-	authRepository := repository.NewAuthRepository()
-	authService := service.NewAuthService(authRepository , db ,validate )
-	authController := controller.NewAuthController(authService)
+	authRepository := repositoryAuth.NewAuthRepository()
+	authService := serviceAuth.NewAuthService(authRepository , db ,validate )
+	authController := controllerAuth.NewAuthController(authService)
 
+	//Tasks
+	tasksRepository := repositoryTasks.NewTasksRepository()
+	tasksService := serviceTasks.NewTasksService(tasksRepository,db,validate)
+	tasksController := controllerTasks.NewTasksController(tasksService)
 	
 	
 	router := mux.NewRouter()
@@ -32,10 +40,11 @@ func main() {
 	router.HandleFunc("/todolist/login",authController.Login).Methods("POST")
 	router.HandleFunc("/todolist/logout", authController.Logout).Methods("GET")
 
-	/*todolist := router.PathPrefix("/mytodolist").Subrouter()
-	todolist.HandleFunc("/create",).Methods("")*/
+	todolist := router.PathPrefix("/mytodolist").Subrouter()
+	todolist.Use(middlewares.JWTMiddleware)
+	todolist.HandleFunc("/create",tasksController.CreateTask).Methods("POST")
 
-	router.Use(exception.ErrorHandler)
+	router.Use(exception.ErrorHandler) 
 
 	server := http.Server{
 		Addr: "localhost:3000",
@@ -45,3 +54,6 @@ func main() {
 	err := server.ListenAndServe()
 	helper.PanicIfError(err)
 }
+
+//pr Penanganan error ketika di due date memasukkan yang bukan tanggal dan jam
+// mengubah format responsenya

@@ -33,6 +33,9 @@ func handleError(writer http.ResponseWriter , request *http.Request, err interfa
 	if conflictError(writer,request,err){
 		return
 	}
+	if badRequestError(writer,request,err){
+		return
+	}
 
 
 	internalServerError(writer,request,err)
@@ -156,4 +159,22 @@ func WriteUnauthorizedError(writer http.ResponseWriter, errorMessage string) {
 	}
 
 	helper.WriteToResponseBody(writer, webResponse)
+}
+
+func badRequestError(writer http.ResponseWriter , request *http.Request, err interface{}) bool {
+	exception,ok := err.(BadRequestError)
+	if ok{
+		writer.Header().Set("Content-Type","application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+
+		webResponse := web.WebResponse{
+			Code: http.StatusBadRequest,
+			Status: "BAD REQUEST",
+			Data: exception.Error,
+		}
+		helper.WriteToResponseBody(writer,webResponse)
+		return true
+	}else{
+		return false
+	}
 }
