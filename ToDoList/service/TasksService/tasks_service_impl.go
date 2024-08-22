@@ -125,3 +125,72 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 
 	return helper.ToTasksResponse(task,username,completedStatus)
 }
+
+func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.UpdateTaskRequest) web.TaskResponse{
+	err := service.validate.Struct(request)
+	helper.PanicIfError(err)
+	
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+	
+	tokenString, ok := ctx.Value(util.TokenKey).(string)
+	if !ok {
+		helper.PanicIfError(errors.New("token not found in context"))
+	}
+
+	claims := &util.JWTClaim{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return util.JWT_KEY, nil
+	})
+	if err != nil || !token.Valid {
+		panic(exception.NewUnauthorizedError("invalid token"))
+	}
+	
+	// get ID from klaim JWT as UserID
+	idUser := claims.ID
+	username:= claims.Username
+
+	task,err := service.TaskRepository.FindTaskById(ctx,tx,request.IdTask,idUser)
+	if err != nil{
+		panic(exception.NewNotFoundError(err.Error()))
+	}
+
+	request.Title = helper.GetDefaultIfEmpty(request.Title,task.Title)
+	request.Description = helper.GetDefaultIfEmpty(request.Description,task.Description)
+	
+
+	// handle optional field
+	
+	if request.DueDate != "" {
+			defaultTime := " 23:59:59"
+			if !strings.Contains(request.DueDate, ":") {
+					request.DueDate += defaultTime
+			}
+
+			formattedDate := "2006-01-02 15:04:05"
+			parsedDate, err := time.Parse(formattedDate, request.DueDate)
+			if err != nil {
+					errorMessage := "Invalid due_date format: " + request.DueDate+ " . Expected format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
+					panic(exception.NewBadRequestError(errorMessage))
+			}
+
+			task.DueDate = sql.NullTime{Time: parsedDate, Valid: true}
+	} 
+	
+
+	task.Title = request.Title
+	task.Description = request.Description
+	
+
+	task = service.TaskRepository.UpdateTask(ctx,tx,task)
+
+	var completedStatus string
+	if task.Completed == 1{
+		completedStatus = "Completed"
+	}else{
+		completedStatus = "Pending"
+	}
+
+	return helper.ToTasksResponse(task,username,completedStatus)
+}

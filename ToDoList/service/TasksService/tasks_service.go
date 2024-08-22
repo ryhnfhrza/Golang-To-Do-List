@@ -8,4 +8,5 @@ import (
 
 type TasksService interface {
 	CreateTask(ctx context.Context, request web.CreateTaskRequest) web.TaskResponse
+	UpdateTask(ctx context.Context, request web.UpdateTaskRequest) web.TaskResponse
 }

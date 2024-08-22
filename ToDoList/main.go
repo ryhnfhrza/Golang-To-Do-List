@@ -40,9 +40,11 @@ func main() {
 	router.HandleFunc("/todolist/login",authController.Login).Methods("POST")
 	router.HandleFunc("/todolist/logout", authController.Logout).Methods("GET")
 
+	//task
 	todolist := router.PathPrefix("/mytodolist").Subrouter()
 	todolist.Use(middlewares.JWTMiddleware)
 	todolist.HandleFunc("/create",tasksController.CreateTask).Methods("POST")
+	todolist.HandleFunc("/update/{taskId}",tasksController.UpdateTask).Methods("PATCH")
 
 	router.Use(exception.ErrorHandler) 
 
@@ -55,5 +57,3 @@ func main() {
 	helper.PanicIfError(err)
 }
 
-//pr Penanganan error ketika di due date memasukkan yang bukan tanggal dan jam
-// mengubah format responsenya
