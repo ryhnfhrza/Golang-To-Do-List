@@ -10,5 +10,6 @@ import (
 type TasksRepository interface{
 	CreateTask(ctx context.Context, tx *sql.Tx, task domain.Tasks) domain.Tasks
 	UpdateTask(ctx context.Context, tx *sql.Tx,task domain.Tasks)domain.Tasks
+	DeleteTask(ctx context.Context, tx *sql.Tx,task domain.Tasks)
 	FindTaskById(ctx context.Context,tx *sql.Tx, idTask, idUser string) (domain.Tasks,error)
 }

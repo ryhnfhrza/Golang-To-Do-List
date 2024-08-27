@@ -3,20 +3,14 @@ package service
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/exception"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/helper"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/model/domain"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/model/web"
 	repository "github.com/ryhnfhrza/Golang-To-Do-List-API/repository/TasksRepository"
-	"github.com/ryhnfhrza/Golang-To-Do-List-API/util"
 )
 
 type TasksServiceImpl struct {
@@ -41,53 +35,27 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
 	
-	tokenString, ok := ctx.Value(util.TokenKey).(string)
-	if !ok {
-		helper.PanicIfError(errors.New("token not found in context"))
+	idUser, username, err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
 	}
+	
+	idStrNoHyphens := helper.GenerateTaskID()
 
-	claims := &util.JWTClaim{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return util.JWT_KEY, nil
-	})
-	if err != nil || !token.Valid {
-		panic(exception.NewUnauthorizedError("invalid token"))
-	}
-	
-	// get ID from klaim JWT as UserID
-	idUser := claims.ID
-	username:= claims.Username
-	
-	// id tasks maker
-	id := uuid.New()
-	idStr := id.String()
-	idStrNoHyphens := strings.ReplaceAll(idStr, "-", "")
 	
 	// handle optional field
-	var dueDate sql.NullTime
-	if request.DueDate != "" {
-			defaultTime := " 23:59:59"
-			if !strings.Contains(request.DueDate, ":") {
-					request.DueDate += defaultTime
-			}
-
-			formattedDate := "2006-01-02 15:04:05"
-			parsedDate, err := time.Parse(formattedDate, request.DueDate)
-			if err != nil {
-					errorMessage := "Invalid due_date format: " + request.DueDate+ " . Expected format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
-					panic(exception.NewBadRequestError(errorMessage))
-			}
-
-			dueDate = sql.NullTime{Time: parsedDate, Valid: true}
-	} else {
-			dueDate = sql.NullTime{Valid: false}
+	dueDate, err := helper.ParseDueDate(request.DueDate)
+	if err != nil {
+			panic(exception.NewBadRequestError(err.Error()))
 	}
-
 		
 	description := request.Description
 	if description == "" {
 		description = "No description provided"
 	}
+
+	//local time
+	
 
 	
 
@@ -103,16 +71,7 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
     UpdatedAt: time.Now(),
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			if sqlErr, ok := r.(*mysql.MySQLError); ok {
-				if sqlErr.Number == 1644 { 
-					panic(exception.NewBadRequestError(sqlErr.Message))
-				}
-			}
-			panic(r)
-		}
-	}()
+	defer exception.HandleSQLError()
 
 	task = service.TaskRepository.CreateTask(ctx,tx,task)
 
@@ -134,22 +93,10 @@ func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.Updat
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
 	
-	tokenString, ok := ctx.Value(util.TokenKey).(string)
-	if !ok {
-		helper.PanicIfError(errors.New("token not found in context"))
+	idUser, username, err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
 	}
-
-	claims := &util.JWTClaim{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return util.JWT_KEY, nil
-	})
-	if err != nil || !token.Valid {
-		panic(exception.NewUnauthorizedError("invalid token"))
-	}
-	
-	// get ID from klaim JWT as UserID
-	idUser := claims.ID
-	username:= claims.Username
 
 	task,err := service.TaskRepository.FindTaskById(ctx,tx,request.IdTask,idUser)
 	if err != nil{
@@ -162,27 +109,17 @@ func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.Updat
 
 	// handle optional field
 	
-	if request.DueDate != "" {
-			defaultTime := " 23:59:59"
-			if !strings.Contains(request.DueDate, ":") {
-					request.DueDate += defaultTime
-			}
+	dueDate, err := helper.ParseDueDate(request.DueDate)
+	if err != nil {
+			panic(exception.NewBadRequestError(err.Error()))
+	}
 
-			formattedDate := "2006-01-02 15:04:05"
-			parsedDate, err := time.Parse(formattedDate, request.DueDate)
-			if err != nil {
-					errorMessage := "Invalid due_date format: " + request.DueDate+ " . Expected format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS"
-					panic(exception.NewBadRequestError(errorMessage))
-			}
-
-			task.DueDate = sql.NullTime{Time: parsedDate, Valid: true}
-	} 
-	
-
+	task.DueDate = dueDate
 	task.Title = request.Title
 	task.Description = request.Description
-	
 
+	defer exception.HandleSQLError()
+	
 	task = service.TaskRepository.UpdateTask(ctx,tx,task)
 
 	var completedStatus string
@@ -193,4 +130,23 @@ func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.Updat
 	}
 
 	return helper.ToTasksResponse(task,username,completedStatus)
+}
+
+func(service *TasksServiceImpl)DeleteTask(ctx context.Context, taskId string){
+
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+	
+	idUser, _ , err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
+	}
+
+	task,err := service.TaskRepository.FindTaskById(ctx,tx,taskId,idUser)
+	if err != nil{
+		panic(exception.NewNotFoundError(err.Error()))
+	}
+
+	service.TaskRepository.DeleteTask(ctx,tx,task)
 }

@@ -34,6 +34,13 @@ func(Repository *TasksRepositoryImpl)UpdateTask(ctx context.Context, tx *sql.Tx,
 	return task
 }
 
+func(Repository *TasksRepositoryImpl)DeleteTask(ctx context.Context, tx *sql.Tx,task domain.Tasks){
+	SQL := "delete from tasks where id = ? and user_id = ?"  
+
+	_,err := tx.ExecContext(ctx,SQL,task.IdTasks,task.UserId)
+	helper.PanicIfError(err)
+}
+
 func(Repository *TasksRepositoryImpl)FindTaskById(ctx context.Context,tx *sql.Tx, idTask, idUser string) (domain.Tasks,error){
 	SQL := "select id,user_id,title,description,completed,due_date,notified,created_at,updated_at from tasks where id = ? and user_id = ?"
 	rows,err := tx.QueryContext(ctx,SQL,idTask,idUser)

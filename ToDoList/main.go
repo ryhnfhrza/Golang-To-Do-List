@@ -45,6 +45,7 @@ func main() {
 	todolist.Use(middlewares.JWTMiddleware)
 	todolist.HandleFunc("/create",tasksController.CreateTask).Methods("POST")
 	todolist.HandleFunc("/update/{taskId}",tasksController.UpdateTask).Methods("PATCH")
+	todolist.HandleFunc("/delete/{taskId}",tasksController.DeleteTask).Methods("DELETE")
 
 	router.Use(exception.ErrorHandler) 
 

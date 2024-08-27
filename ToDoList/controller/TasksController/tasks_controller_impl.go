@@ -65,3 +65,24 @@ func(controller *TasksControllerImpl)UpdateTask(writer http.ResponseWriter,reque
 	
 	helper.WriteToResponseBody(writer,webResponse)
 }
+
+func(controller *TasksControllerImpl)DeleteTask(writer http.ResponseWriter, request *http.Request){
+	_, ok := request.Context().Value(util.TokenKey).(string)
+	if !ok {
+		exception.WriteUnauthorizedError(writer, "Token not found in context")
+		return
+	}
+	
+	vars := mux.Vars(request)
+	taskId := vars["taskId"]
+	
+	
+	controller.TasksService.DeleteTask(request.Context(),taskId)
+
+	webResponse := web.WebResponse{
+		Code: http.StatusOK,
+		Status: "OK",
+	}
+	
+	helper.WriteToResponseBody(writer,webResponse)
+}
