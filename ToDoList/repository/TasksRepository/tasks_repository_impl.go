@@ -57,3 +57,20 @@ func(Repository *TasksRepositoryImpl)FindTaskById(ctx context.Context,tx *sql.Tx
 		return task,errors.New("task not found")
 	}
 }
+
+func(Repository *TasksRepositoryImpl)FindAllTask(ctx context.Context,tx *sql.Tx,idUser string)[]domain.Tasks{
+	SQL := "select title,description,due_date,completed,created_at from tasks where user_id = ?"
+	rows,err := tx.QueryContext(ctx,SQL,idUser)
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var tasks []domain.Tasks
+	for rows.Next(){
+		task := domain.Tasks{}
+		err := rows.Scan(&task.Title,&task.Description,&task.DueDate,&task.Completed,&task.CreatedAt)
+		helper.PanicIfError(err)
+		tasks = append(tasks, task)
+
+	}
+	return tasks
+}

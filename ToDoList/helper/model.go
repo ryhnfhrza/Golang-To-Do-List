@@ -29,7 +29,7 @@ func ToLoginResponse(user domain.Users)web.AuthResponse{
 
 }
 
-func ToTasksResponse(tasks domain.Tasks,username string,completedStatus string)web.TaskResponse{
+func ToTasksResponse(tasks domain.Tasks)web.TaskResponse{
 
 	createdAtFormatted := tasks.CreatedAt.Format(time.RFC3339)
 	dueDateFormatted := ""
@@ -37,8 +37,14 @@ func ToTasksResponse(tasks domain.Tasks,username string,completedStatus string)w
     dueDateFormatted = tasks.DueDate.Time.Format(time.RFC3339)
 	}
 
+	var completedStatus string
+	if tasks.Completed == 1 {
+		completedStatus = "Completed"
+	} else {
+		completedStatus = "Pending"
+	}
+
 	return web.TaskResponse{
-		UserName: username, 
 		Title: tasks.Title,      
 		Description: tasks.Description, 
 		Completed:completedStatus,   
@@ -48,10 +54,11 @@ func ToTasksResponse(tasks domain.Tasks,username string,completedStatus string)w
 
 }
 
-func ToTasksResponses(tasks [] domain.Tasks,username string,completedStatus string)[]web.TaskResponse{
+func ToTasksResponses(tasks []domain.Tasks) []web.TaskResponse {
 	var taskResponses []web.TaskResponse
-	for _,t := range tasks{
-		taskResponses = append(taskResponses, ToTasksResponse(t,username,completedStatus))
+	for _, t := range tasks {
+		taskResponses = append(taskResponses, ToTasksResponse(t))
 	}
 	return taskResponses
 }
+

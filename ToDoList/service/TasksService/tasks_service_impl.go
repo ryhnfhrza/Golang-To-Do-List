@@ -27,7 +27,7 @@ func NewTasksService(taskRepository repository.TasksRepository, db *sql.DB, Vali
 	}
 }
 
-func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.CreateTaskRequest) web.TaskResponse{
+func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.CreateTaskRequest) web.UserTasksResponses{
 	err := service.validate.Struct(request)
 	helper.PanicIfError(err)
 	
@@ -52,12 +52,7 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 	description := request.Description
 	if description == "" {
 		description = "No description provided"
-	}
-
-	//local time
-	
-
-	
+	}	
 
 	task := domain.Tasks{
 		IdTasks: idStrNoHyphens, 
@@ -75,17 +70,14 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 
 	task = service.TaskRepository.CreateTask(ctx,tx,task)
 
-	var completedStatus string
-	if task.Completed == 1{
-		completedStatus = "Completed"
-	}else{
-		completedStatus = "Pending"
+	taskResponse := helper.ToTasksResponse(task)
+	return web.UserTasksResponses{
+		UserName: username,
+		Tasks:    []web.TaskResponse{taskResponse},
 	}
-
-	return helper.ToTasksResponse(task,username,completedStatus)
 }
 
-func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.UpdateTaskRequest) web.TaskResponse{
+func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.UpdateTaskRequest) web.UserTasksResponses{
 	err := service.validate.Struct(request)
 	helper.PanicIfError(err)
 	
@@ -122,14 +114,11 @@ func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.Updat
 	
 	task = service.TaskRepository.UpdateTask(ctx,tx,task)
 
-	var completedStatus string
-	if task.Completed == 1{
-		completedStatus = "Completed"
-	}else{
-		completedStatus = "Pending"
+	taskResponse := helper.ToTasksResponse(task)
+	return web.UserTasksResponses{
+		UserName: username,
+		Tasks:    []web.TaskResponse{taskResponse},
 	}
-
-	return helper.ToTasksResponse(task,username,completedStatus)
 }
 
 func(service *TasksServiceImpl)DeleteTask(ctx context.Context, taskId string){
@@ -149,4 +138,23 @@ func(service *TasksServiceImpl)DeleteTask(ctx context.Context, taskId string){
 	}
 
 	service.TaskRepository.DeleteTask(ctx,tx,task)
+}
+
+func(service *TasksServiceImpl)FindAllTask(ctx context.Context)web.UserTasksResponses{
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+
+	
+	idUser, username , err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
+	}
+	
+	tasks := service.TaskRepository.FindAllTask(ctx,tx,idUser)
+	
+	return web.UserTasksResponses{
+		UserName: username,
+		Tasks:    helper.ToTasksResponses(tasks),
+	}
 }
