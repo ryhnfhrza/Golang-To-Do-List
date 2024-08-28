@@ -94,13 +94,40 @@ func(controller *TasksControllerImpl)FindAllTask(writer http.ResponseWriter, req
 		exception.WriteUnauthorizedError(writer, "Token not found in context")
 		return
 	}
+
+	sortBy := request.URL.Query().Get("sort_by")
+	order := request.URL.Query().Get("order")
 	
-	TasksResponses := controller.TasksService.FindAllTask(request.Context())
+	TasksResponses := controller.TasksService.FindAllTask(request.Context(),sortBy,order)
 	
 	webResponse := web.WebResponse{
 		Code: http.StatusOK,
 		Status: "OK",
 		Data: TasksResponses,
+	}
+	
+	helper.WriteToResponseBody(writer,webResponse)
+}
+
+func(controller *TasksControllerImpl)SearchTask(writer http.ResponseWriter, request *http.Request){
+	_, ok := request.Context().Value(util.TokenKey).(string)
+	if !ok {
+		exception.WriteUnauthorizedError(writer, "Token not found in context")
+		return
+	}
+	
+	vars := mux.Vars(request)
+	task := vars["keyword"]
+
+	sortBy := request.URL.Query().Get("sort_by")
+	order := request.URL.Query().Get("order")
+	
+	taskResponse := controller.TasksService.SearchTask(request.Context(),task,sortBy,order)
+
+	webResponse := web.WebResponse{
+		Code: http.StatusOK,
+		Status: "OK",
+		Data: taskResponse,
 	}
 	
 	helper.WriteToResponseBody(writer,webResponse)

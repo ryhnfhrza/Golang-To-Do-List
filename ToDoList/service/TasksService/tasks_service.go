@@ -10,5 +10,6 @@ type TasksService interface {
 	CreateTask(ctx context.Context, request web.CreateTaskRequest) web.UserTasksResponses
 	UpdateTask(ctx context.Context, request web.UpdateTaskRequest) web.UserTasksResponses
 	DeleteTask(ctx context.Context, taskId string)
-	FindAllTask(ctx context.Context)web.UserTasksResponses
+	FindAllTask(ctx context.Context,sortBy,order string)web.UserTasksResponses
+	SearchTask(ctx context.Context, keyword,sortBy,order string) web.UserTasksResponses
 }

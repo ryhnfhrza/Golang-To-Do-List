@@ -47,6 +47,7 @@ func main() {
 	todolist.HandleFunc("/update/{taskId}",tasksController.UpdateTask).Methods("PATCH")
 	todolist.HandleFunc("/delete/{taskId}",tasksController.DeleteTask).Methods("DELETE")
 	todolist.HandleFunc("/list-tasks",tasksController.FindAllTask).Methods("GET")
+	todolist.HandleFunc("/search/{keyword}",tasksController.SearchTask).Methods("GET")
 
 	router.Use(exception.ErrorHandler) 
 

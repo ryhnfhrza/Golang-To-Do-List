@@ -11,6 +11,8 @@ type TasksRepository interface{
 	CreateTask(ctx context.Context, tx *sql.Tx, task domain.Tasks) domain.Tasks
 	UpdateTask(ctx context.Context, tx *sql.Tx,task domain.Tasks)domain.Tasks
 	DeleteTask(ctx context.Context, tx *sql.Tx,task domain.Tasks)
-	FindTaskById(ctx context.Context,tx *sql.Tx, idTask, idUser string) (domain.Tasks,error)
-	FindAllTask(ctx context.Context,tx *sql.Tx,idUser string)[]domain.Tasks
+	FindTaskById(ctx context.Context,tx *sql.Tx,idTask, idUser string) (domain.Tasks,error)
+	FindAllTask(ctx context.Context,tx *sql.Tx,idUser,sortBy,order string)[]domain.Tasks
+	SearchTask(ctx context.Context, tx *sql.Tx, keyword, idUser,sortBy,order string)([]domain.Tasks,error)
+	
 }

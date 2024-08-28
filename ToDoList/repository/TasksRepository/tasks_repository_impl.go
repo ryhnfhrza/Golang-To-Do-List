@@ -58,8 +58,8 @@ func(Repository *TasksRepositoryImpl)FindTaskById(ctx context.Context,tx *sql.Tx
 	}
 }
 
-func(Repository *TasksRepositoryImpl)FindAllTask(ctx context.Context,tx *sql.Tx,idUser string)[]domain.Tasks{
-	SQL := "select title,description,due_date,completed,created_at from tasks where user_id = ?"
+func(Repository *TasksRepositoryImpl)FindAllTask(ctx context.Context,tx *sql.Tx,idUser,sortBy,order string)[]domain.Tasks{
+	SQL := "select title,description,due_date,completed,created_at from tasks where user_id = ? order by " + sortBy + " " + order 
 	rows,err := tx.QueryContext(ctx,SQL,idUser)
 	helper.PanicIfError(err)
 	defer rows.Close()
@@ -73,4 +73,29 @@ func(Repository *TasksRepositoryImpl)FindAllTask(ctx context.Context,tx *sql.Tx,
 
 	}
 	return tasks
+}
+
+func(Repository *TasksRepositoryImpl)SearchTask(ctx context.Context, tx *sql.Tx, keyword, idUser,sortBy,order string)([]domain.Tasks,error){
+	SQL := `
+        select title,description,due_date,completed,created_at 
+        FROM tasks
+        WHERE user_id = ?
+        AND (title LIKE ? OR description LIKE ?) ORDER BY ` + sortBy + ` ` + order
+    
+	rows,err := tx.QueryContext(ctx,SQL,idUser,"%"+keyword+"%","%"+keyword+"%")
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var tasks []domain.Tasks
+	for rows.Next(){
+		task := domain.Tasks{}
+		err := rows.Scan(&task.Title,&task.Description,&task.DueDate,&task.Completed,&task.CreatedAt)
+		if err!= nil {
+			return nil,errors.New("task not found")
+		}
+		tasks = append(tasks, task)
+
+	}
+
+	return tasks,nil
 }

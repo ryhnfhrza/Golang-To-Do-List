@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -140,7 +141,7 @@ func(service *TasksServiceImpl)DeleteTask(ctx context.Context, taskId string){
 	service.TaskRepository.DeleteTask(ctx,tx,task)
 }
 
-func(service *TasksServiceImpl)FindAllTask(ctx context.Context)web.UserTasksResponses{
+func(service *TasksServiceImpl)FindAllTask(ctx context.Context,sortBy,order string)web.UserTasksResponses{
 	tx,err := service.Db.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
@@ -150,9 +151,60 @@ func(service *TasksServiceImpl)FindAllTask(ctx context.Context)web.UserTasksResp
 	if err != nil {
 		panic(exception.NewUnauthorizedError(err.Error()))
 	}
+
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+	if order == "" {
+			order = "DESC"
+	}
+
+	orderReq := strings.ToUpper(order)
 	
-	tasks := service.TaskRepository.FindAllTask(ctx,tx,idUser)
+	validSortBy,validOrder,err :=helper.ValidateSortParams(sortBy,orderReq)
+	if err != nil{
+		panic(exception.NewBadRequestError(err.Error()))
+	}
 	
+
+	tasks := service.TaskRepository.FindAllTask(ctx,tx,idUser,validSortBy,validOrder)
+	
+	return web.UserTasksResponses{
+		UserName: username,
+		Tasks:    helper.ToTasksResponses(tasks),
+	}
+}
+
+func(service *TasksServiceImpl)SearchTask(ctx context.Context, keyword,sortBy,order string) web.UserTasksResponses{
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+
+	
+	idUser, username , err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
+	}
+
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+	if order == "" {
+			order = "DESC"
+	}
+
+	orderReq := strings.ToUpper(order)
+	
+	validSortBy,validOrder,err := helper.ValidateSortParams(sortBy,orderReq)
+	if err != nil{
+		panic(exception.NewBadRequestError(err.Error()))
+	}
+
+	tasks,err := service.TaskRepository.SearchTask(ctx,tx,keyword,idUser,validSortBy,validOrder)
+	if err != nil{
+		panic(exception.NewNotFoundError(err.Error()))
+	}
+
 	return web.UserTasksResponses{
 		UserName: username,
 		Tasks:    helper.ToTasksResponses(tasks),
