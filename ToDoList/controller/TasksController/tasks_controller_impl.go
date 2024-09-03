@@ -132,3 +132,25 @@ func(controller *TasksControllerImpl)SearchTask(writer http.ResponseWriter, requ
 	
 	helper.WriteToResponseBody(writer,webResponse)
 }
+
+func(controller *TasksControllerImpl)ComplatedTask(writer http.ResponseWriter, request *http.Request){
+	_, ok := request.Context().Value(util.TokenKey).(string)
+	if !ok {
+		exception.WriteUnauthorizedError(writer, "Token not found in context")
+		return
+	}
+	
+	vars := mux.Vars(request)
+	taskId := vars["taskId"]
+	
+	
+	controller.TasksService.CompletedTask(request.Context(),taskId)
+
+	webResponse := web.WebResponse{
+		Code: http.StatusOK,
+		Status: "OK",
+	}
+	
+	helper.WriteToResponseBody(writer,webResponse)
+}
+

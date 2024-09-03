@@ -12,4 +12,6 @@ type TasksService interface {
 	DeleteTask(ctx context.Context, taskId string)
 	FindAllTask(ctx context.Context,sortBy,order string)web.UserTasksResponses
 	SearchTask(ctx context.Context, keyword,sortBy,order string) web.UserTasksResponses
+	SendDueDateReminders(ctx context.Context)error
+	CompletedTask(ctx context.Context, taskId string)
 }

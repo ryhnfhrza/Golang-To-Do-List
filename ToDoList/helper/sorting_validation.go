@@ -9,7 +9,7 @@ func ValidateSortParams(sortBy, order string) (string, string, error) {
     validOrder := map[string]bool{"ASC": true, "DESC": true}
 
     if !validSortBy[sortBy] || !validOrder[order] {
-        return "", "", errors.New("Bad Request")
+        return "", "", errors.New("bad Request")
     }
 
     return sortBy, order, nil

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/robfig/cron/v3"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/app"
 	controllerAuth "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/AuthController"
 	controllerTasks "github.com/ryhnfhrza/Golang-To-Do-List-API/controller/TasksController"
@@ -48,8 +51,21 @@ func main() {
 	todolist.HandleFunc("/delete/{taskId}",tasksController.DeleteTask).Methods("DELETE")
 	todolist.HandleFunc("/list-tasks",tasksController.FindAllTask).Methods("GET")
 	todolist.HandleFunc("/search/{keyword}",tasksController.SearchTask).Methods("GET")
-
+	todolist.HandleFunc("/completed/{taskId}",tasksController.ComplatedTask).Methods("PATCH")
+	
 	router.Use(exception.ErrorHandler) 
+
+	c := cron.New()
+    _, errCron := c.AddFunc("@every 1m", func() {
+        ctx := context.Background()
+        if err := tasksService.SendDueDateReminders(ctx); err != nil {
+            log.Println("Error sending due date reminders:", err)
+        }
+    })
+    if errCron != nil {
+        log.Fatalf("Error setting up cron job: %v", errCron)
+    }
+    c.Start()
 
 	server := http.Server{
 		Addr: "localhost:3000",
@@ -59,4 +75,7 @@ func main() {
 	err := server.ListenAndServe()
 	helper.PanicIfError(err)
 }
+/*
+2. Adding feat to complete task
+*/
 

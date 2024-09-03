@@ -8,6 +8,7 @@ Endpoint
 - Delete Task
 - Get All Task
 - Get Single Task
+- Search Task
 
 Database :
 	Table User:- Id uuid Primary key
@@ -26,3 +27,42 @@ Database :
 		   - Notified bool
 		   - CreatedAt time
 		   - UpdtedAt
+
+Upcoming feature:
+
+1. Collaborative Tasks:
+Feature to add collaborators to a task, where each team member can view, edit, and mark the task as complete.
+Implement an access control system, for example, only the creator can delete the task.
+
+2. Subtasks:
+Ability to create subtasks under a main task, allowing users to break down work into smaller, more manageable parts.
+
+3. Task Priority:
+Add a priority feature to tasks (e.g., low, medium, high) so users can sort or filter tasks by priority.
+
+4. Recurring Tasks:
+Feature to create recurring tasks, where users can set tasks to reappear daily, weekly, or monthly.
+
+5. Task Dependencies:
+Feature to set dependencies between tasks, for example, task B can only start after task A is completed. This is useful for more complex project management.
+
+6. Tagging and Labels:
+Add a tagging or labeling system to categorize tasks. Users can filter and group tasks based on labels.
+
+7. Calendar Integration:
+Integration with calendars (e.g., Google Calendar) to view tasks in a calendar format, as well as add or update tasks directly from the calendar.
+
+8. Time Tracking:
+Add a feature to track the time spent on each task, allowing users to see how long they have worked on a task.
+
+9. Notifications and Reminders:
+In addition to email notifications, add support for SMS or push notifications to ensure users don't miss important tasks.
+
+10. Task History/Log:
+Store a history of changes to tasks, such as who changed the status, edited details, or added/removed subtasks.
+
+11. Advanced Search and Filtering:
+Users can search tasks based on various criteria such as label, priority, due date, completion status, or even task description content.
+
+12. Archiving Completed Tasks:
+Provide a feature to archive tasks that are completed, keeping the task list clean while preserving records of past tasks.

@@ -14,5 +14,8 @@ type TasksRepository interface{
 	FindTaskById(ctx context.Context,tx *sql.Tx,idTask, idUser string) (domain.Tasks,error)
 	FindAllTask(ctx context.Context,tx *sql.Tx,idUser,sortBy,order string)[]domain.Tasks
 	SearchTask(ctx context.Context, tx *sql.Tx, keyword, idUser,sortBy,order string)([]domain.Tasks,error)
-	
+	FindTaskDueInOneDay(ctx context.Context,tx *sql.Tx)[]domain.UserTasks
+	FindTaskDueInOneHour(ctx context.Context,tx *sql.Tx)[]domain.UserTasks
+	UpdateTaskAfterNotification(ctx context.Context, tx *sql.Tx,task domain.Tasks)error
+	CompletedTask(ctx context.Context, tx *sql.Tx,task domain.Tasks)
 }

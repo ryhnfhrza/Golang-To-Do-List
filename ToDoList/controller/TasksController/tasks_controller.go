@@ -10,4 +10,5 @@ type TasksController interface {
 	DeleteTask(writer http.ResponseWriter, request *http.Request)
 	FindAllTask(writer http.ResponseWriter, request *http.Request)
 	SearchTask(writer http.ResponseWriter, request *http.Request)
+	ComplatedTask(writer http.ResponseWriter, request *http.Request)
 }

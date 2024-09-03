@@ -47,13 +47,16 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 	// handle optional field
 	dueDate, err := helper.ParseDueDate(request.DueDate)
 	if err != nil {
-			panic(exception.NewBadRequestError(err.Error()))
+		panic(exception.NewBadRequestError(err.Error()))
 	}
-		
+	
 	description := request.Description
 	if description == "" {
 		description = "No description provided"
-	}	
+		}	
+
+	//handle notified
+	notifStatus := helper.CalculateNotificationStatus(dueDate)
 
 	task := domain.Tasks{
 		IdTasks: idStrNoHyphens, 
@@ -62,7 +65,7 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
     Description: description,
     Completed: 0,
     DueDate: dueDate,
-    Notified: 0,
+    Notified: notifStatus,
     CreatedAt: time.Now(),
     UpdatedAt: time.Now(),
 	}
@@ -106,11 +109,14 @@ func(service *TasksServiceImpl)UpdateTask(ctx context.Context, request web.Updat
 	if err != nil {
 			panic(exception.NewBadRequestError(err.Error()))
 	}
+	//handle notified
+	notifStatus := helper.CalculateNotificationStatus(dueDate)
 
 	task.DueDate = dueDate
 	task.Title = request.Title
 	task.Description = request.Description
-
+	task.Notified = notifStatus
+	
 	defer exception.HandleSQLError()
 	
 	task = service.TaskRepository.UpdateTask(ctx,tx,task)
@@ -209,4 +215,73 @@ func(service *TasksServiceImpl)SearchTask(ctx context.Context, keyword,sortBy,or
 		UserName: username,
 		Tasks:    helper.ToTasksResponses(tasks),
 	}
+}
+
+func(service *TasksServiceImpl)SendDueDateReminders(ctx context.Context)error{
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+
+	userTasksDueOneDay := service.TaskRepository.FindTaskDueInOneDay(ctx,tx)
+	for _, t := range userTasksDueOneDay {
+		
+		stringDueDate := t.DueDate.Time.Format(time.RFC3339)
+		helper.SendGomail("emailTemplate.html",t.Email,t.Username,t.Title,t.Description,stringDueDate,"1 Day")
+		
+		taskToUpdate := domain.Tasks{
+			IdTasks:   t.IdTasks,
+			UserId:    t.UserId,
+			Title:     t.Title,
+			Description: t.Description,
+			Completed: 0,  
+			DueDate:   t.DueDate,
+			Notified:  1,  
+			CreatedAt: t.CreatedAt,
+			UpdatedAt: t.UpdatedAt,
+		}
+
+		err := service.TaskRepository.UpdateTaskAfterNotification(ctx,tx,taskToUpdate)
+		helper.PanicIfError(err)
+	}
+
+	userTasksDueOneHour := service.TaskRepository.FindTaskDueInOneHour(ctx,tx)
+	for _, t := range userTasksDueOneHour {
+		
+		stringDueDate := t.DueDate.Time.Format(time.RFC3339)
+		helper.SendGomail("emailTemplate.html",t.Email,t.Username,t.Title,t.Description,stringDueDate,"1 hour")
+		
+		taskToUpdate := domain.Tasks{
+			IdTasks:   t.IdTasks,
+			UserId:    t.UserId,
+			Title:     t.Title,
+			Description: t.Description,
+			Completed: 0,  
+			DueDate:   t.DueDate,
+			Notified:  2,  
+			CreatedAt: t.CreatedAt,
+			UpdatedAt: t.UpdatedAt,
+		}
+
+		err := service.TaskRepository.UpdateTaskAfterNotification(ctx,tx,taskToUpdate)
+		helper.PanicIfError(err)
+	}
+	return nil
+}
+
+func(service *TasksServiceImpl)CompletedTask(ctx context.Context, taskId string){
+	tx,err := service.Db.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
+	
+	idUser, _ , err := helper.ExtractUserFromToken(ctx)
+	if err != nil {
+		panic(exception.NewUnauthorizedError(err.Error()))
+	}
+
+	task,err := service.TaskRepository.FindTaskById(ctx,tx,taskId,idUser)
+	if err != nil{
+		panic(exception.NewNotFoundError(err.Error()))
+	}
+
+	service.TaskRepository.CompletedTask(ctx,tx,task)
 }

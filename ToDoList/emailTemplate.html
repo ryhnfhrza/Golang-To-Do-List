@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Reminder</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+        line-height: 1.6;
+      }
+      .container {
+        width: 80%;
+        margin: 20px auto;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+      }
+      .content {
+        margin-top: 20px;
+      }
+      .task-info {
+        margin: 15px 0;
+      }
+      .task-info h2 {
+        margin: 0 0 10px;
+        color: #007bff;
+      }
+      .task-info p {
+        margin: 5px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 10px;
+        border-top: 1px solid #ddd;
+        font-size: 0.9em;
+        color: #777;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Task Reminder</h1>
+      </div>
+      <div class="content">
+        <p>Hello, {{.UserName}}!</p>
+        <p>This is a reminder for the following task:</p>
+        <div class="task-info">
+          <h2>{{.TaskTitle}}</h2>
+          <p><strong>Description:</strong> {{.TaskDescription}}</p>
+          <p><strong>Due Date:</strong> {{.DueDate}}</p>
+          <p><strong>Remaining Time:</strong> {{.TimeRemaining}}</p>
+        </div>
+        <p>Please ensure that you complete it before the deadline.</p>
+      </div>
+      <div class="footer">
+        <p>This is an automated message. Please do not reply.</p>
+      </div>
+    </div>
+  </body>
+</html>

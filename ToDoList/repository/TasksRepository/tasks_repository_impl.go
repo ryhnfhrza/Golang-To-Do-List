@@ -26,9 +26,9 @@ func(Repository *TasksRepositoryImpl)CreateTask(ctx context.Context, tx *sql.Tx,
 }
 
 func(Repository *TasksRepositoryImpl)UpdateTask(ctx context.Context, tx *sql.Tx, task domain.Tasks) domain.Tasks{
-	SQL := "update tasks set title = ?, description = ?, due_date = ? where id = ? and user_id = ?"  
+	SQL := "update tasks set title = ?, description = ?, due_date = ?, notified = ? where id = ? and user_id = ?"  
 
-	_,err := tx.ExecContext(ctx,SQL,task.Title,task.Description,task.DueDate,task.IdTasks,task.UserId)
+	_,err := tx.ExecContext(ctx,SQL,task.Title,task.Description,task.DueDate,task.Notified,task.IdTasks,task.UserId)
 	helper.PanicIfError(err)
 
 	return task
@@ -59,7 +59,7 @@ func(Repository *TasksRepositoryImpl)FindTaskById(ctx context.Context,tx *sql.Tx
 }
 
 func(Repository *TasksRepositoryImpl)FindAllTask(ctx context.Context,tx *sql.Tx,idUser,sortBy,order string)[]domain.Tasks{
-	SQL := "select title,description,due_date,completed,created_at from tasks where user_id = ? order by " + sortBy + " " + order 
+	SQL := "select title,description,due_date,completed,created_at from tasks where user_id = ? order by completed ASC, " + sortBy + " " + order 
 	rows,err := tx.QueryContext(ctx,SQL,idUser)
 	helper.PanicIfError(err)
 	defer rows.Close()
@@ -80,7 +80,7 @@ func(Repository *TasksRepositoryImpl)SearchTask(ctx context.Context, tx *sql.Tx,
         select title,description,due_date,completed,created_at 
         FROM tasks
         WHERE user_id = ?
-        AND (title LIKE ? OR description LIKE ?) ORDER BY ` + sortBy + ` ` + order
+        AND (title LIKE ? OR description LIKE ?) ORDER BY completed ASC, ` + sortBy + ` ` + order
     
 	rows,err := tx.QueryContext(ctx,SQL,idUser,"%"+keyword+"%","%"+keyword+"%")
 	helper.PanicIfError(err)
@@ -98,4 +98,95 @@ func(Repository *TasksRepositoryImpl)SearchTask(ctx context.Context, tx *sql.Tx,
 	}
 
 	return tasks,nil
+}
+
+func(Repository *TasksRepositoryImpl)FindTaskDueInOneDay(ctx context.Context,tx *sql.Tx)[]domain.UserTasks{
+	SQL := `SELECT 
+					u.id ,
+					u.email , 
+					u.username , 
+					t.id,
+					t.title , 
+					t.description , 
+					t.due_date ,
+					t.created_at,
+					t.updated_at
+					FROM 
+							tasks t 
+					JOIN 
+							users u 
+					ON 
+							t.user_id = u.id 
+					WHERE 
+							t.due_date BETWEEN NOW() AND NOW() + INTERVAL 1 DAY 
+							AND t.notified = 0
+							AND t.completed = 0
+				` 
+	rows,err := tx.QueryContext(ctx,SQL)
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var userTasks []domain.UserTasks
+	for rows.Next(){
+		task := domain.UserTasks{}
+		err := rows.Scan(&task.UserId,&task.Email,&task.Username,&task.IdTasks,&task.Title,&task.Description,&task.DueDate,&task.CreatedAt,&task.UpdatedAt)
+		helper.PanicIfError(err)
+		userTasks = append(userTasks, task)
+
+	}
+	return userTasks
+}
+
+func(Repository *TasksRepositoryImpl)FindTaskDueInOneHour(ctx context.Context,tx *sql.Tx)[]domain.UserTasks{
+	SQL := `SELECT 
+					u.id ,
+					u.email , 
+					u.username , 
+					t.id , 
+					t.title , 
+					t.description , 
+					t.due_date,
+					t.created_at,
+					t.updated_at
+					FROM 
+							tasks t 
+					JOIN 
+							users u 
+					ON 
+							t.user_id = u.id 
+					WHERE 
+							t.due_date BETWEEN NOW() AND NOW() + INTERVAL 1 HOUR
+							AND t.notified = 1
+							AND t.completed = 0
+							` 
+
+	rows,err := tx.QueryContext(ctx,SQL)
+	helper.PanicIfError(err)
+	defer rows.Close()
+
+	var userTasks []domain.UserTasks
+	for rows.Next(){
+		task := domain.UserTasks{}
+		err := rows.Scan(&task.UserId,&task.Email,&task.Username,&task.IdTasks,&task.Title,&task.Description,&task.DueDate,&task.CreatedAt,&task.UpdatedAt)
+		helper.PanicIfError(err)
+		userTasks = append(userTasks, task)
+
+	}
+	return userTasks
+}
+
+func(Repository *TasksRepositoryImpl)UpdateTaskAfterNotification(ctx context.Context, tx *sql.Tx,task domain.Tasks)error{
+	SQL := "update tasks set notified = ? where id = ? and user_id = ?"  
+
+	_,err := tx.ExecContext(ctx,SQL,task.Notified,task.IdTasks,task.UserId)
+	helper.PanicIfError(err)
+
+	return err
+}
+
+func(Repository *TasksRepositoryImpl)CompletedTask(ctx context.Context, tx *sql.Tx,task domain.Tasks){
+	SQL := "update tasks set completed = 1 where id = ? and user_id = ?"  
+
+	_,err := tx.ExecContext(ctx,SQL,task.IdTasks,task.UserId)
+	helper.PanicIfError(err)
 }
