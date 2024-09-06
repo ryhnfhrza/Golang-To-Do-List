@@ -34,12 +34,12 @@ func SendGomail(templatePath string, userEmail, userName, taskTitle, taskDescrip
 
 	// Create and send email
 	m := gomail.NewMessage()
-	m.SetHeader("From", "test@gmail.com") // input ur email here
+	m.SetHeader("From", "YourEmail@gmail.com") // input ur email here
 	m.SetHeader("To", userEmail)
 	m.SetHeader("Subject", "Task Reminder")
 	m.SetBody("text/html", body.String())
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "test@gmail.com", "mcanca") // input password here
+	d := gomail.NewDialer("smtp.gmail.com", 587, "yourEmail@gmail.com", "yourAppPassword") // input password here
 	if err := d.DialAndSend(m); err != nil {
 		panic(err)
 	}

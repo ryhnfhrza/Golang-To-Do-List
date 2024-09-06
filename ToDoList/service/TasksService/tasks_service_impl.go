@@ -55,8 +55,16 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
 		description = "No description provided"
 		}	
 
+		//handle created_at and updated at
+		now := time.Now()
+		loc, err := time.LoadLocation("Asia/Makassar")
+    helper.PanicIfError(err)
+		witaTime := now.In(loc)
+		
+
 	//handle notified
 	notifStatus := helper.CalculateNotificationStatus(dueDate)
+
 
 	task := domain.Tasks{
 		IdTasks: idStrNoHyphens, 
@@ -66,8 +74,8 @@ func(service *TasksServiceImpl)CreateTask(ctx context.Context, request web.Creat
     Completed: 0,
     DueDate: dueDate,
     Notified: notifStatus,
-    CreatedAt: time.Now(),
-    UpdatedAt: time.Now(),
+    CreatedAt: witaTime,
+    UpdatedAt: witaTime,
 	}
 
 	defer exception.HandleSQLError()
