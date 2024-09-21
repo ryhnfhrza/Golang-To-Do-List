@@ -2,19 +2,28 @@ package helper
 
 import (
 	"bytes"
+	"log"
+	"os"
+	"strconv"
 	"text/template"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/gomail.v2"
 )
 
 func SendGomail(templatePath string, userEmail, userName, taskTitle, taskDescription, dueDate, timeRemaining string) {
-	// Get the HTML template
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	} 
+
 	var body bytes.Buffer
 	t, err := template.ParseFiles(templatePath)
 	if err != nil {
 		panic(err)
 	}
-	// Execute template with data
+	
 	err = t.Execute(&body, struct {
 		UserName      string
 		TaskTitle     string
@@ -32,14 +41,21 @@ func SendGomail(templatePath string, userEmail, userName, taskTitle, taskDescrip
 		panic(err)
 	}
 
-	// Create and send email
+	email := os.Getenv("EMAIL_SENDER")
+	password := os.Getenv("EMAIL_PASSWORD")
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+
+	port,err := strconv.Atoi(smtpPort)
+	PanicIfError(err)
+
 	m := gomail.NewMessage()
-	m.SetHeader("From", "YourEmail@gmail.com") // input ur email here
+	m.SetHeader("From", email) 
 	m.SetHeader("To", userEmail)
 	m.SetHeader("Subject", "Task Reminder")
 	m.SetBody("text/html", body.String())
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, "yourEmail@gmail.com", "yourAppPassword") // input password here
+	d := gomail.NewDialer(smtpHost, port, email, password) 
 	if err := d.DialAndSend(m); err != nil {
 		panic(err)
 	}

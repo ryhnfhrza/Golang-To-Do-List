@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/gorilla/mux"
 	"github.com/robfig/cron/v3"
 	"github.com/ryhnfhrza/Golang-To-Do-List-API/app"
@@ -24,6 +25,8 @@ import (
 func main() {
 	validate := validator.New()
 	db := app.NewDb()
+
+	helper.RunMigrations(db)
 
 	//Auth
 	authRepository := repositoryAuth.NewAuthRepository()
@@ -75,7 +78,5 @@ func main() {
 	err := server.ListenAndServe()
 	helper.PanicIfError(err)
 }
-/*
-2. Adding feat to complete task
-*/
+
 
